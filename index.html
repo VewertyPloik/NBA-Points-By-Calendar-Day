@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Points by Calendar Day</title>
+
+<style>
+/* --- CSS STYLES --- */
+body { font-family: system-ui, sans-serif; margin: 0; background: #0f172a; color: white; }
+header { position: sticky; top: 0; background: #020617; padding: 16px; text-align: center; z-index: 10; border-bottom: 1px solid #1e293b; }
+
+.header-content { display: flex; justify-content: space-between; align-items: center; max-width: 650px; margin: 0 auto; flex-wrap: wrap; gap: 10px; }
+h1 { margin: 0; font-size: 20px; text-align: left; }
+.btn-group { display: flex; gap: 10px; }
+
+#leaderboardBtn { background: #facc15; color: #0f172a; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; }
+#leaderboardBtn:hover { background: #eab308; transform: scale(1.05); }
+
+#clearFilterBtn { display: none; background: #fb7185; color: #0f172a; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; }
+#clearFilterBtn:hover { background: #f43f5e; transform: scale(1.05); }
+
+input { margin-top: 15px; padding: 12px; width: 100%; box-sizing: border-box; max-width: 650px; border-radius: 10px; border: none; outline: none; background: #1e293b; color: white; font-size: 15px; }
+input::placeholder { color: #94a3b8; }
+
+.container { padding: 10px; max-width: 650px; margin: 0 auto; }
+.month { margin-top: 24px; font-weight: bold; font-size: 22px; border-bottom: 2px solid #334155; padding-bottom: 5px; }
+.card { background: #1e293b; border-radius: 12px; padding: 16px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+.left-info { display: flex; flex-direction: column; gap: 6px; }
+.date { font-size: 13px; color: #94a3b8; text-transform: uppercase; font-weight: bold; }
+.player { font-size: 18px; font-weight: bold; }
+.game-details { font-size: 13px; color: #cbd5e1; }
+.points-container { text-align: right; }
+.points { font-size: 26px; font-weight: 800; color: #475569; }
+.score { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+.has-record { color: #facc15; }
+.high { color: #fb7185; }
+
+/* Modal (Leaderboard) Styles */
+.modal { display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
+.modal-content { background-color: #0f172a; margin: 10% auto; padding: 24px; border: 1px solid #334155; width: 90%; max-width: 550px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 12px; margin-bottom: 16px; }
+.modal-header h2 { margin: 0; font-size: 22px; color: #facc15; }
+.close { color: #94a3b8; font-size: 32px; font-weight: bold; cursor: pointer; line-height: 1; }
+.close:hover { color: white; }
+.leader-item { background: #1e293b; margin-bottom: 12px; border-radius: 10px; padding: 14px; }
+.leader-top-row { display: flex; justify-content: space-between; align-items: center; }
+.leader-name { font-size: 18px; font-weight: bold; }
+.leader-actions { display: flex; align-items: center; gap: 10px; }
+.leader-count { background: #334155; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; color: #facc15; }
+.show-dates-btn { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+.show-dates-btn:hover { background: #2563eb; transform: scale(1.05); }
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>🏀 NBA Points by Calendar Day By Vewerty Ploik</h1>
+        <div class="btn-group">
+            <button id="leaderboardBtn">🏆 Leaderboard</button>
+            <button id="clearFilterBtn">❌ Disable Filter</button>
+        </div>
+        <input id="search" placeholder="Search player, team, year, or date...">
+    </div>
+</header>
+
+<div class="container" id="list"></div>
+
+<div id="leaderboardModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Top 10 Record Holders</h2>
+            <span class="close">&times;</span>
+        </div>
+        <div id="leaderboardList"></div>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// 🛑 EDIT YOUR RECORDS HERE 🛑
+// ==========================================
+
+const records = {
+    // --- JANUARY ---
+    "Jan 1": {player: "DeMar DeRozan", points: 52, year: 2018, team: "Raptors", opp: "Bucks", score: "131-127"},
+    "Jan 2": {player: "Donovan Mitchell", points: 71, year: 2023, team: "Cavaliers", opp: "Bulls", score: "145-134"},
+    "Jan 3": {player: "Steph Curry", points: 62, year: 2021, team: "Warriors", opp: "Blazers", score: "137-122"},
+    "Jan 4": {player: "Giannis Antetokounmpo", points: 55, year: 2023, team: "Bucks", opp: "Wizards", score: "123-113"},
+    "Jan 5": {player: "Klay Thompson", points: 54, year: 2023, team: "Warriors", opp: "Hawks", score: "143-141"},
+    "Jan 6": {player: "Julius Randle", points: 46, year: 2022, team: "Knicks", opp: "Celtics", score: "105-108"},
+    "Jan 7": {player: "Bradley Beal", points: 60, year: 2021, team: "Wizards", opp: "76ers", score: "136-141"},
+    "Jan 8": {player: "Steph Curry", points: 43, year: 2021, team: "Warriors", opp: "Clippers", score: "115-105"},
+    "Jan 9": {player: "James Harden", points: 42, year: 2019, team: "Rockets", opp: "Bucks", score: "109-116"},
+    "Jan 10": {player: "LeBron James", points: 44, year: 2006, team: "Cavaliers", opp: "Knicks", score: "98-92"},
+    "Jan 11": {player: "De'Aaron Fox", points: 44, year: 2021, team: "Kings", opp: "Warriors", score: "106-114"},
+    "Jan 12": {player: "Kevin Durant", points: 51, year: 2014, team: "Thunder", opp: "Warriors", score: "127-121"},
+    "Jan 13": {player: "Giannis Antetokounmpo", points: 49, year: 2021, team: "Bucks", opp: "Pacers", score: "114-115"},
+    "Jan 14": {player: "Michael Jordan", points: 44, year: 1990, team: "Bulls", opp: "Knicks", score: "106-109"},
+    "Jan 15": {player: "Joel Embiid", points: 42, year: 2023, team: "76ers", opp: "Lakers", score: "113-112"},
+    "Jan 16": {player: "James Harden", points: 58, year: 2019, team: "Rockets", opp: "Nets", score: "142-145"},
+    "Jan 17": {player: "Damian Lillard", points: 50, year: 2020, team: "Trail Blazers", opp: "Mavericks", score: "112-120"},
+    "Jan 18": {player: "Kemba Walker", points: 52, year: 2016, team: "Hornets", opp: "Jazz", score: "124-119"},
+    "Jan 19": {player: "Nikola Jokic", points: 47, year: 2021, team: "Nuggets", opp: "Jazz", score: "128-117"},
+    "Jan 20": {player: "Damian Lillard", points: 61, year: 2020, team: "Trail Blazers", opp: "Warriors", score: "129-124"},
+    "Jan 21": {player: "Donovan Mitchell", points: 46, year: 2021, team: "Jazz", opp: "Knicks", score: "113-104"},
+    "Jan 22": {player: "Kobe Bryant", points: 81, year: 2006, team: "Lakers", opp: "Raptors", score: "122-104"},
+    "Jan 23": {player: "James Harden", points: 61, year: 2019, team: "Rockets", opp: "Knicks", score: "114-110"},
+    "Jan 24": {player: "Devin Booker", points: 48, year: 2024, team: "Suns", opp: "Mavericks", score: "132-109"},
+    "Jan 25": {player: "LeBron James", points: 46, year: 2021, team: "Lakers", opp: "Cavaliers", score: "115-108"},
+    "Jan 26": {player: "Luka Dončić", points: 73, year: 2024, team: "Mavericks", opp: "Hawks", score: "148-143"},
+    "Jan 27": {player: "Steph Curry", points: 46, year: 2024, team: "Warriors", opp: "Lakers", score: "144-145"},
+    "Jan 28": {player: "Joel Embiid", points: 47, year: 2023, team: "76ers", opp: "Nuggets", score: "126-119"},
+    "Jan 29": {player: "DeMar DeRozan", points: 50, year: 2022, team: "Bulls", opp: "Clippers", score: "135-130"},
+    "Jan 30": {player: "James Harden", points: 60, year: 2018, team: "Rockets", opp: "Magic", score: "114-107"},
+    "Jan 31": {player: "Jalen Brunson", points: 40, year: 2024, team: "Knicks", opp: "Jazz", score: "118-103"},
+
+    // --- FEBRUARY ---
+    "Feb 1": { player: "Tyrese Maxey", points: 51, year: 2024, team: "76ers", opp: "Jazz", score: "127-124" },
+    "Feb 2": { player: "Kobe Bryant", points: 61, year: 2009, team: "Lakers", opp: "Knicks", score: "126-117" },
+    "Feb 3": { player: "Stephen Curry", points: 60, year: 2024, team: "Warriors", opp: "Hawks", score: "134-141" },
+    "Feb 4": { player: "Stephen Curry", points: 51, year: 2015, team: "Warriors", opp: "Mavericks", score: "128-114" },
+    "Feb 5": { player: "LeBron James", points: 51, year: 2009, team: "Cavaliers", opp: "Knicks", score: "107-102" },
+    "Feb 6": { player: "C.J. McCollum", points: 50, year: 2018, team: "Trail Blazers", opp: "Bulls", score: "124-108" },
+    "Feb 7": { player: "Wilt Chamberlain", points: 65, year: 1966, team: "76ers", opp: "Lakers", score: "132-125" },
+    "Feb 8": { player: "Wilt Chamberlain", points: 59, year: 1962, team: "Warriors", opp: "Knicks", score: "136-120" },
+    "Feb 9": { player: "Wilt Chamberlain", points: 66, year: 1969, team: "Lakers", opp: "Suns", score: "134-116" },
+    "Feb 10": { player: "Joe Fulks", points: 63, year: 1949, team: "Warriors", opp: "Jets", score: "108-87" },
+    "Feb 11": { player: "James Harden", points: 42, year: 2019, team: "Rockets", opp: "Mavericks", score: "120-104" },
+    "Feb 12": { player: "Allen Iverson", points: 60, year: 2005, team: "76ers", opp: "Magic", score: "112-99" },
+    "Feb 13": { player: "Wilt Chamberlain", points: 65, year: 1962, team: "Warriors", opp: "Royals", score: "132-152" },
+    "Feb 14": { player: "Michael Jordan", points: 49, year: 1990, team: "Bulls", opp: "Magic", score: "105-95" },
+    "Feb 15": { player: "Devin Booker", points: 44, year: 2023, team: "Suns", opp: "Kings", score: "120-109" },
+    "Feb 16": { player: "Michael Jordan", points: 50, year: 1989, team: "Bulls", opp: "Bucks", score: "117-116" },
+    "Feb 17": { player: "Wilt Chamberlain", points: 67, year: 1962, team: "Warriors", opp: "Hawks", score: "121-128" },
+    "Feb 18": { player: "Michael Jordan", points: 58, year: 1987, team: "Bulls", opp: "Nets", score: "128-113" },
+    "Feb 19": { player: "Damian Lillard", points: 44, year: 2016, team: "Trail Blazers", opp: "Warriors", score: "137-105" },
+    "Feb 20": { player: "Moses Malone", points: 43, year: 1982, team: "Rockets", opp: "Kings", score: "122-113" },
+    "Feb 21": { player: "Anthony Davis", points: 59, year: 2016, team: "Pelicans", opp: "Pistons", score: "111-106" },
+    "Feb 22": { player: "Wilt Chamberlain", points: 61, year: 1962, team: "Warriors", opp: "Nationals", score: "128-121" },
+    "Feb 23": { player: "James Harden", points: 58, year: 2019, team: "Rockets", opp: "Heat", score: "121-118" },
+    "Feb 24": { player: "DeMar DeRozan", points: 43, year: 2017, team: "Raptors", opp: "Celtics", score: "107-97" },
+    "Feb 25": { player: "Pete Maravich", points: 68, year: 1977, team: "Jazz", opp: "Knicks", score: "124-107" },
+    "Feb 26": { player: "Damian Lillard", points: 71, year: 2023, team: "Trail Blazers", opp: "Rockets", score: "131-114" },
+    "Feb 27": { player: "Wilt Chamberlain", points: 65, year: 1962, team: "Warriors", opp: "Hawks", score: "147-137" },
+    "Feb 28": { player: "Wilt Chamberlain", points: 61, year: 1962, team: "Warriors", opp: "Packers", score: "128-121" },
+    "Feb 29": { player: "Jalen Brunson", points: 40, year: 2024, team: "Knicks", opp: "Warriors", score: "99-110" },
+    
+    // --- MARCH ---
+    "Mar 1": { player: "Stephen Curry", points: 48, year: 2018, team: "Warriors", opp: "Wizards", score: "114-109" },
+    "Mar 2": { player: "Wilt Chamberlain", points: 100, year: 1962, team: "Warriors", opp: "Knicks", score: "169-147" },
+    "Mar 3": { player: "LeBron James", points: 61, year: 2014, team: "Heat", opp: "Bobcats", score: "124-107" },
+    "Mar 4": { player: "Deron Williams", points: 57, year: 2012, team: "Nets", opp: "Bobcats", score: "104-101" },
+    "Mar 5": { player: "LeBron James", points: 56, year: 2022, team: "Lakers", opp: "Warriors", score: "124-116" },
+    "Mar 6": { player: "Shaquille O'Neal", points: 61, year: 2000, team: "Lakers", opp: "Clippers", score: "123-103" },
+    "Mar 7": { player: "De'Aaron Fox", points: 44, year: 2022, team: "Kings", opp: "Knicks", score: "115-131" },
+    "Mar 8": { player: "Kyrie Irving", points: 50, year: 2022, team: "Nets", opp: "Hornets", score: "132-121" },
+    "Mar 9": { player: "Russell Westbrook", points: 58, year: 2017, team: "Thunder", opp: "Trail Blazers", score: "121-126" },
+    "Mar 10": { player: "Tracy McGrady", points: 62, year: 2004, team: "Magic", opp: "Wizards", score: "108-99" },
+    "Mar 11": { player: "Damian Lillard", points: 50, year: 2021, team: "Trail Blazers", opp: "Pelicans", score: "125-124" },
+    "Mar 12": { player: "Larry Bird", points: 60, year: 1985, team: "Celtics", opp: "Hawks", score: "126-115" },
+    "Mar 13": { player: "James Harden", points: 44, year: 2021, team: "Nets", opp: "Pistons", score: "100-95" },
+    "Mar 14": { player: "Karl-Anthony Towns", points: 60, year: 2022, team: "Timberwolves", opp: "Spurs", score: "149-139" },
+    "Mar 15": { player: "Kyrie Irving", points: 60, year: 2022, team: "Nets", opp: "Magic", score: "150-108" },
+    "Mar 16": { player: "Kobe Bryant", points: 65, year: 2007, team: "Lakers", opp: "Trail Blazers", score: "116-111" },
+    "Mar 17": { player: "Giannis Antetokounmpo", points: 52, year: 2019, team: "Bucks", opp: "76ers", score: "125-130" },
+    "Mar 18": { player: "Kobe Bryant", points: 50, year: 2007, team: "Lakers", opp: "Timberwolves", score: "109-102" },
+    "Mar 19": { player: "Bradley Beal", points: 43, year: 2021, team: "Wizards", opp: "Jazz", score: "131-122" },
+    "Mar 20": { player: "LeBron James", points: 51, year: 2006, team: "Cavaliers", opp: "Jazz", score: "108-109" },
+    "Mar 21": { player: "James Harden", points: 57, year: 2019, team: "Rockets", opp: "Grizzlies", score: "125-126" },
+    "Mar 22": { player: "Kobe Bryant", points: 60, year: 2007, team: "Lakers", opp: "Grizzlies", score: "121-119" },
+    "Mar 23": { player: "Kobe Bryant", points: 50, year: 2007, team: "Lakers", opp: "Hornets", score: "111-105" },
+    "Mar 24": { player: "Devin Booker", points: 70, year: 2017, team: "Suns", opp: "Celtics", score: "120-130" },
+    "Mar 25": { player: "Zach LaVine", points: 39, year: 2022, team: "Bulls", opp: "Pelicans", score: "109-126" },
+    "Mar 26": { player: "Luka Dončić", points: 40, year: 2023, team: "Mavericks", opp: "Hornets", score: "104-110" },
+    "Mar 27": { player: "Devin Booker", points: 59, year: 2019, team: "Suns", opp: "Jazz", score: "92-125" },
+    "Mar 28": { player: "Michael Jordan", points: 69, year: 1990, team: "Bulls", opp: "Cavaliers", score: "117-113" },
+    "Mar 29": { player: "Russell Westbrook", points: 57, year: 2017, team: "Thunder", opp: "Magic", score: "114-106" },
+    "Mar 30": { player: "Kevin Durant", points: 41, year: 2022, team: "Nets", opp: "Pistons", score: "130-123" },
+    "Mar 31": { player: "Kevin Durant", points: 55, year: 2022, team: "Nets", opp: "Hawks", score: "115-122"},
+    
+    // --- APRIL ---
+    "Apr 1": { player: "Devin Booker", points: 52, year: 2024, team: "Suns", opp: "Pelicans", score: "124-111" },
+    "Apr 2": { player: "Kevin Durant", points: 55, year: 2022, team: "Nets", opp: "Hawks", score: "115-122" },
+    "Apr 3": { player: "Chris Webber", points: 51, year: 2001, team: "Kings", opp: "Pacers", score: "91-93" },
+    "Apr 4": { player: "Stephen Curry", points: 47, year: 2021, team: "Warriors", opp: "Hawks", score: "111-117" },
+    "Apr 5": { player: "Kyrie Irving", points: 42, year: 2022, team: "Nets", opp: "Rockets", score: "118-105" },
+    "Apr 6": { player: "Damian Lillard", points: 50, year: 2023, team: "Blazers", opp: "Pelicans", score: "110-121" },
+    "Apr 7": { player: "Bradley Beal", points: 50, year: 2021, team: "Wizards", opp: "Pacers", score: "133-132" },
+    "Apr 8": { player: "Wilt Chamberlain", points: 50, year: 1962, team: "Warriors", opp: "Lakers", score: "115-117" },
+    "Apr 9": { player: "David Thompson", points: 73, year: 1978, team: "Nuggets", opp: "Pistons", score: "137-139" },
+    "Apr 10": { player: "Kobe Bryant", points: 47, year: 2013, team: "Lakers", opp: "Blazers", score: "113-106" },
+    "Apr 11": { player: "Kevin Durant", points: 45, year: 2021, team: "Nets", opp: "Timberwolves", score: "127-97" },
+    "Apr 12": { player: "Kobe Bryant", points: 47, year: 2004, team: "Lakers", opp: "Blazers", score: "105-104" },
+    "Apr 13": { player: "Kobe Bryant", points: 60, year: 2016, team: "Lakers", opp: "Jazz", score: "101-96" },
+    "Apr 14": { player: "Stephen Curry", points: 49, year: 2021, team: "Warriors", opp: "Thunder", score: "147-109" },
+    "Apr 15": { player: "Kobe Bryant", points: 45, year: 2007, team: "Lakers", opp: "Sonics", score: "109-98" },
+    "Apr 16": { player: "Michael Jordan", points: 50, year: 1987, team: "Bulls", opp: "Hawks", score: "114-117" },
+    "Apr 17": { player: "Jayson Tatum", points: 44, year: 2021, team: "Celtics", opp: "Warriors", score: "119-114" },
+    "Apr 18": { player: "Damian Lillard", points: 50, year: 2019, team: "Blazers", opp: "Thunder", score: "118-115" },
+    "Apr 19": { player: "Stephen Curry", points: 49, year: 2021, team: "Warriors", opp: "76ers", score: "107-96" },
+    "Apr 20": { player: "Michael Jordan", points: 63, year: 1986, team: "Bulls", opp: "Celtics", score: "131-135" },
+    "Apr 21": { player: "Bob Cousy", points: 50, year: 1953, team: "Celtics", opp: "Nationals", score: "111-105" },
+    "Apr 22": { player: "Michael Jordan", points: 56, year: 1992, team: "Bulls", opp: "Heat", score: "119-114" },
+    "Apr 23": { player: "Russell Westbrook", points: 43, year: 2017, team: "Thunder", opp: "Rockets", score: "109-113" },
+    "Apr 24": { player: "David Robinson", points: 71, year: 1994, team: "Spurs", opp: "Clippers", score: "112-97" },
+    "Apr 25": { player: "LeBron James", points: 45, year: 2018, team: "Cavaliers", opp: "Pacers", score: "98-95" },
+    "Apr 26": { player: "Wilt Chamberlain", points: 56, year: 1962, team: "Warriors", opp: "Celtics", score: "109-119" },
+    "Apr 27": { player: "Michael Jordan", points: 55, year: 1997, team: "Bulls", opp: "Bullets", score: "109-104" },
+    "Apr 28": { player: "John Havlicek", points: 54, year: 1973, team: "Celtics", opp: "Hawks", score: "134-109" },
+    "Apr 29": { player: "Michael Jordan", points: 54, year: 1998, team: "Bulls", opp: "Nets", score: "116-101" },
+    "Apr 30": { player: "Stephen Curry", points: 50, year: 2023, team: "Warriors", opp: "Kings", score: "120-100" },
+
+    // --- MAY (Playoffs) ---
+    "May 1": { player: "Michael Jordan", points: 50, year: 1988, team: "Bulls", opp: "Cavaliers", score: "104-93" },
+    "May 2": { player: "Damian Lillard", points: 34, year: 2021, team: "Blazers", opp: "Celtics", score: "129-119" },
+    "May 3": { player: "LeBron James", points: 43, year: 2018, team: "Cavaliers", opp: "Raptors", score: "128-110" },
+    "May 4": { player: "Kobe Bryant", points: 48, year: 2001, team: "Lakers", opp: "Kings", score: "119-113" },
+    "May 5": { player: "LeBron James", points: 38, year: 2018, team: "Cavaliers", opp: "Raptors", score: "105-103" },
+    "May 6": { player: "Kobe Bryant", points: 39, year: 2010, team: "Lakers", opp: "Jazz", score: "111-110" },
+    "May 7": { player: "Devin Booker", points: 36, year: 2023, team: "Suns", opp: "Nuggets", score: "129-124" },
+    "May 8": { player: "Stephen Curry", points: 49, year: 2021, team: "Warriors", opp: "Thunder", score: "136-97" },
+    "May 9": { player: "Bradley Beal", points: 50, year: 2021, team: "Wizards", opp: "Pacers", score: "133-132" },
+    "May 10": { player: "Kevin Durant", points: 36, year: 2019, team: "Warriors", opp: "Rockets", score: "118-113" },
+    "May 11": { player: "Michael Jordan", points: 39, year: 1997, team: "Bulls", opp: "Hawks", score: "100-92" },
+    "May 12": { player: "Stephen Curry", points: 47, year: 2013, team: "Warriors", opp: "Spurs", score: "97-87" },
+    "May 13": { player: "LeBron James", points: 49, year: 2014, team: "Heat", opp: "Nets", score: "102-96" },
+    "May 14": { player: "Jayson Tatum", points: 51, year: 2023, team: "Celtics", opp: "76ers", score: "112-88" },
+    "May 15": { player: "Kobe Bryant", points: 40, year: 2009, team: "Lakers", opp: "Rockets", score: "89-70" },
+    "May 16": { player: "Stephen Curry", points: 46, year: 2021, team: "Warriors", opp: "Grizzlies", score: "113-101" },
+    "May 17": { player: "Jimmy Butler", points: 41, year: 2022, team: "Heat", opp: "Celtics", score: "118-107" },
+    "May 18": { player: "Kobe Bryant", points: 40, year: 2010, team: "Lakers", opp: "Suns", score: "128-107" },
+    "May 19": { player: "LeBron James", points: 40, year: 2009, team: "Cavaliers", opp: "Magic", score: "106-107" },
+    "May 20": { player: "LeBron James", points: 30, year: 2017, team: "Cavaliers", opp: "Celtics", score: "130-86" },
+    "May 21": { player: "LeBron James", points: 44, year: 2018, team: "Cavaliers", opp: "Celtics", score: "111-102" },
+    "May 22": { player: "LeBron James", points: 40, year: 2023, team: "Lakers", opp: "Nuggets", score: "111-113" },
+    "May 23": { player: "Luka Dončić", points: 30, year: 2021, team: "Mavericks", opp: "Clippers", score: "113-103" },
+    "May 24": { player: "LeBron James", points: 37, year: 2014, team: "Heat", opp: "Pacers", score: "99-87" },
+    "May 25": { player: "LeBron James", points: 46, year: 2018, team: "Cavaliers", opp: "Celtics", score: "109-99" },
+    "May 26": { player: "Jimmy Butler", points: 47, year: 2022, team: "Heat", opp: "Celtics", score: "111-103" },
+    "May 27": { player: "LeBron James", points: 35, year: 2018, team: "Cavaliers", opp: "Celtics", score: "87-79" },
+    "May 28": { player: "Jayson Tatum", points: 50, year: 2021, team: "Celtics", opp: "Nets", score: "125-119" },
+    "May 29": { player: "Jimmy Butler", points: 28, year: 2023, team: "Heat", opp: "Celtics", score: "103-84" },
+    "May 30": { player: "Kobe Bryant", points: 39, year: 2008, team: "Lakers", opp: "Spurs", score: "100-92" },
+    "May 31": { player: "LeBron James", points: 51, year: 2018, team: "Cavaliers", opp: "Warriors", score: "114-124" },
+
+    // --- JUNE (Finals & Late Playoffs) ---
+    "Jun 1": { player: "Damian Lillard", points: 55, year: 2021, team: "Blazers", opp: "Nuggets", score: "140-147" },
+    "Jun 2": { player: "Stephen Curry", points: 33, year: 2018, team: "Warriors", opp: "Cavaliers", score: "122-103" },
+    "Jun 3": { player: "Michael Jordan", points: 39, year: 1992, team: "Bulls", opp: "Blazers", score: "122-89" },
+    "Jun 4": { player: "LeBron James", points: 39, year: 2015, team: "Cavaliers", opp: "Warriors", score: "100-108" },
+    "Jun 5": { player: "Stephen Curry", points: 29, year: 2022, team: "Warriors", opp: "Celtics", score: "107-88" },
+    "Jun 6": { player: "Allen Iverson", points: 48, year: 2001, team: "76ers", opp: "Lakers", score: "107-101" },
+    "Jun 7": { player: "LeBron James", points: 39, year: 2015, team: "Cavaliers", opp: "Warriors", score: "95-93" },
+    "Jun 8": { player: "Kevin Durant", points: 43, year: 2018, team: "Warriors", opp: "Cavaliers", score: "110-102" },
+    "Jun 9": { player: "LeBron James", points: 40, year: 2015, team: "Cavaliers", opp: "Warriors", score: "96-91" },
+    "Jun 10": { player: "Stephen Curry", points: 43, year: 2022, team: "Warriors", opp: "Celtics", score: "107-97" },
+    "Jun 11": { player: "Michael Jordan", points: 38, year: 1997, team: "Bulls", opp: "Jazz", score: "90-88" },
+    "Jun 12": { player: "Dwyane Wade", points: 42, year: 2006, team: "Heat", opp: "Mavericks", score: "98-96" },
+    "Jun 13": { player: "LeBron James", points: 41, year: 2016, team: "Cavaliers", opp: "Warriors", score: "112-97" },
+    "Jun 14": { player: "Michael Jordan", points: 45, year: 1998, team: "Bulls", opp: "Jazz", score: "87-86" },
+    "Jun 15": { player: "Kevin Durant", points: 49, year: 2021, team: "Nets", opp: "Bucks", score: "114-108" },
+    "Jun 16": { player: "Michael Jordan", points: 55, year: 1993, team: "Bulls", opp: "Suns", score: "111-105" },
+    "Jun 17": { player: "Giannis Antetokounmpo", points: 30, year: 2021, team: "Bucks", opp: "Nets", score: "104-89" },
+    "Jun 18": { player: "Dwyane Wade", points: 43, year: 2006, team: "Heat", opp: "Mavericks", score: "101-100" },
+    "Jun 19": { player: "LeBron James", points: 27, year: 2016, team: "Cavaliers", opp: "Warriors", score: "93-89" },
+    "Jun 20": { player: "Giannis Antetokounmpo", points: 40, year: 2021, team: "Bucks", opp: "Nets", score: "115-111" },
+    "Jun 21": { player: "LeBron James", points: 37, year: 2012, team: "Heat", opp: "Thunder", score: "121-106" },
+    "Jun 22": { player: "Deandre Ayton", points: 24, year: 2021, team: "Suns", opp: "Clippers", score: "104-103" },
+    "Jun 23": { player: "Trae Young", points: 48, year: 2021, team: "Hawks", opp: "Bucks", score: "116-113" },
+    "Jun 24": { player: "Paul George", points: 27, year: 2021, team: "Clippers", opp: "Suns", score: "106-92" },
+    "Jun 25": { player: "Giannis Antetokounmpo", points: 25, year: 2021, team: "Bucks", opp: "Hawks", score: "125-91" },
+    "Jun 26": { player: "Devin Booker", points: 25, year: 2021, team: "Suns", opp: "Clippers", score: "84-80" },
+    "Jun 27": { player: "Khris Middleton", points: 38, year: 2021, team: "Bucks", opp: "Hawks", score: "113-102" },
+    "Jun 28": { player: "Paul George", points: 41, year: 2021, team: "Clippers", opp: "Suns", score: "116-102" },
+    "Jun 29": { player: "Lou Williams", points: 21, year: 2021, team: "Hawks", opp: "Bucks", score: "110-88" },
+    "Jun 30": { player: "Chris Paul", points: 41, year: 2021, team: "Suns", opp: "Clippers", score: "130-103" },
+
+    // --- JULY (Bubble & Late Playoffs) ---
+    "Jul 31": { player: "James Harden", points: 49, year: 2020, team: "Rockets", opp: "Mavericks", score: "153-149" },
+
+    // --- AUGUST (The 2020 Bubble) ---
+    "Aug 1": { player: "T.J. Warren", points: 53, year: 2020, team: "Pacers", opp: "76ers", score: "127-121" },
+    "Aug 9": { player: "Damian Lillard", points: 51, year: 2020, team: "Blazers", opp: "76ers", score: "124-121" },
+    "Aug 11": { player: "Damian Lillard", points: 61, year: 2020, team: "Blazers", opp: "Mavericks", score: "134-131" },
+    "Aug 13": { player: "Damian Lillard", points: 42, year: 2020, team: "Blazers", opp: "Nets", score: "134-133" },
+    "Aug 17": { player: "Donovan Mitchell", points: 57, year: 2020, team: "Jazz", opp: "Nuggets", score: "125-135" },
+    "Aug 23": { player: "Jamal Murray", points: 50, year: 2020, team: "Nuggets", opp: "Jazz", score: "127-129" },
+    "Aug 30": { player: "Jamal Murray", points: 50, year: 2020, team: "Nuggets", opp: "Jazz", score: "119-107" },
+
+    // --- SEPTEMBER (Bubble Playoffs) ---
+    "Sep 1": { player: "Donovan Mitchell", points: 22, year: 2020, team: "Jazz", opp: "Nuggets", score: "78-80" },
+    "Sep 15": { player: "Jamal Murray", points: 40, year: 2020, team: "Nuggets", opp: "Clippers", score: "104-89" },
+    "Sep 20": { player: "Anthony Davis", points: 31, year: 2020, team: "Lakers", opp: "Nuggets", score: "105-103" },
+
+    // --- OCTOBER ---
+    "Oct 18": { player: "Jaylen Brown", points: 35, year: 2022, team: "Celtics", opp: "76ers", score: "126-117" },
+    "Oct 19": { player: "Stephen Curry", points: 45, year: 2021, team: "Warriors", opp: "Clippers", score: "115-113" },
+    "Oct 20": { player: "James Harden", points: 40, year: 2012, team: "Rockets", opp: "Pistons", score: "105-96" },
+    "Oct 21": { player: "Giannis Antetokounmpo", points: 44, year: 2022, team: "Bucks", opp: "Rockets", score: "125-105" },
+    "Oct 22": { player: "Wilt Chamberlain", points: 56, year: 1961, team: "Warriors", opp: "Lakers", score: "122-115" },
+    "Oct 23": { player: "Michael Jordan", points: 50, year: 1989, team: "Bulls", opp: "Bucks", score: "111-102" },
+    "Oct 24": { player: "Stephen Curry", points: 51, year: 2018, team: "Warriors", opp: "Wizards", score: "144-122" },
+    "Oct 25": { player: "Damian Lillard", points: 39, year: 2018, team: "Blazers", opp: "Magic", score: "128-114" },
+    "Oct 26": { player: "Michael Jordan", points: 50, year: 1996, team: "Bulls", opp: "Heat", score: "106-100" },
+    "Oct 27": { player: "Anthony Davis", points: 50, year: 2016, team: "Pelicans", opp: "Nuggets", score: "102-107" },
+    "Oct 28": { player: "DeMar DeRozan", points: 40, year: 2016, team: "Raptors", opp: "Cavaliers", score: "91-94" },
+    "Oct 29": { player: "Klay Thompson", points: 52, year: 2018, team: "Warriors", opp: "Bulls", score: "149-124" },
+    "Oct 30": { player: "Stephen Curry", points: 53, year: 2015, team: "Warriors", opp: "Pelicans", score: "134-120" },
+    "Oct 31": { player: "Kevin Durant", points: 51, year: 2018, team: "Warriors", opp: "Raptors", score: "128-131" },
+
+    // --- NOVEMBER ---
+    "Nov 1": { player: "Michael Jordan", points: 50, year: 1986, team: "Bulls", opp: "Knicks", score: "112-108" },
+    "Nov 2": { player: "Wilt Chamberlain", points: 72, year: 1962, team: "Warriors", opp: "Lakers", score: "115-127" },
+    "Nov 3": { player: "Wilt Chamberlain", points: 58, year: 1962, team: "Warriors", opp: "Royals", score: "127-117" },
+    "Nov 4": { player: "Devin Booker", points: 50, year: 2022, team: "Suns", opp: "Pelicans", score: "124-111" },
+    "Nov 5": { player: "Luka Dončić", points: 42, year: 2023, team: "Mavericks", opp: "Hornets", score: "124-118" },
+    "Nov 6": { player: "Michael Jordan", points: 52, year: 1993, team: "Bulls", opp: "Hornets", score: "103-101" },
+    "Nov 7": { player: "Wilt Chamberlain", points: 73, year: 1962, team: "Warriors", opp: "Knicks", score: "130-111" },
+    "Nov 8": { player: "Damian Lillard", points: 60, year: 2019, team: "Blazers", opp: "Nets", score: "115-119" },
+    "Nov 9": { player: "Michael Jordan", points: 52, year: 1988, team: "Bulls", opp: "Celtics", score: "110-104" },
+    "Nov 10": { player: "Giannis Antetokounmpo", points: 54, year: 2023, team: "Bucks", opp: "Pacers", score: "124-126" },
+    "Nov 11": { player: "Trae Young", points: 42, year: 2023, team: "Hawks", opp: "Pistons", score: "126-120" },
+    "Nov 12": { player: "Stephen Curry", points: 50, year: 2021, team: "Warriors", opp: "Hawks", score: "127-113" },
+    "Nov 13": { player: "Bradley Beal", points: 44, year: 2019, team: "Wizards", opp: "Celtics", score: "133-140" },
+    "Nov 14": { player: "Brandon Jennings", points: 55, year: 2009, team: "Bucks", opp: "Warriors", score: "129-125" },
+    "Nov 15": { player: "Karl-Anthony Towns", points: 47, year: 2016, team: "Timberwolves", opp: "Knicks", score: "104-106" },
+    "Nov 16": { player: "Wilt Chamberlain", points: 73, year: 1962, team: "Warriors", opp: "Knicks", score: "127-111" },
+    "Nov 17": { player: "LeBron James", points: 50, year: 2005, team: "Cavaliers", opp: "Knicks", score: "105-93" },
+    "Nov 18": { player: "Kobe Bryant", points: 46, year: 2005, team: "Lakers", opp: "Raptors", score: "109-107" },
+    "Nov 19": { player: "LeBron James", points: 51, year: 2018, team: "Lakers", opp: "Heat", score: "113-97" },
+    "Nov 20": { player: "Michael Jordan", points: 54, year: 1992, team: "Bulls", opp: "Lakers", score: "116-120" },
+    "Nov 21": { player: "Wilt Chamberlain", points: 63, year: 1962, team: "Warriors", opp: "Lakers", score: "129-115" },
+    "Nov 22": { player: "Wilt Chamberlain", points: 50, year: 1962, team: "Warriors", opp: "Packers", score: "127-122" },
+    "Nov 23": { player: "Michael Jordan", points: 52, year: 1990, team: "Bulls", opp: "Nuggets", score: "151-145" },
+    "Nov 24": { player: "Wilt Chamberlain", points: 50, year: 1960, team: "Warriors", opp: "Lakers", score: "122-111" },
+    "Nov 25": { player: "Wilt Chamberlain", points: 53, year: 1961, team: "Warriors", opp: "Hawks", score: "112-110" },
+    "Nov 26": { player: "Michael Jordan", points: 53, year: 1989, team: "Bulls", opp: "Knicks", score: "108-104" },
+    "Nov 27": { player: "Wilt Chamberlain", points: 61, year: 1962, team: "Warriors", opp: "Royals", score: "142-122" },
+    "Nov 28": { player: "Wilt Chamberlain", points: 51, year: 1962, team: "Warriors", opp: "Lakers", score: "125-115" },
+    "Nov 29": { player: "Wilt Chamberlain", points: 53, year: 1962, team: "Warriors", opp: "Hawks", score: "119-122" },
+    "Nov 30": { player: "Devin Booker", points: 51, year: 2022, team: "Suns", opp: "Bulls", score: "132-113" },
+
+    // --- DECEMBER ---
+    "Dec 1": { player: "Stephen Curry", points: 40, year: 2017, team: "Warriors", opp: "Magic", score: "133-112" },
+    "Dec 2": { player: "Stephen Curry", points: 51, year: 2015, team: "Warriors", opp: "Hornets", score: "116-99" },
+    "Dec 3": { player: "James Harden", points: 50, year: 2019, team: "Rockets", opp: "Spurs", score: "133-135" },
+    "Dec 4": { player: "Wilt Chamberlain", points: 59, year: 1964, team: "Warriors", opp: "Hawks", score: "113-114" },
+    "Dec 5": { player: "Wilt Chamberlain", points: 60, year: 1961, team: "Warriors", opp: "Lakers", score: "137-132" },
+    "Dec 6": { player: "Giannis Antetokounmpo", points: 50, year: 2022, team: "Bucks", opp: "Pelicans", score: "135-110" },
+    "Dec 7": { player: "Wilt Chamberlain", points: 61, year: 1961, team: "Warriors", opp: "Lakers", score: "129-121" },
+    "Dec 8": { player: "Wilt Chamberlain", points: 78, year: 1961, team: "Warriors", opp: "Lakers", score: "147-151" },
+    "Dec 9": { player: "Michael Jordan", points: 50, year: 1989, team: "Bulls", opp: "Knicks", score: "112-104" },
+    "Dec 10": { player: "Wilt Chamberlain", points: 61, year: 1962, team: "Warriors", opp: "Packers", score: "135-119" },
+    "Dec 11": { player: "Wilt Chamberlain", points: 61, year: 1962, team: "Warriors", opp: "Hawks", score: "136-124" },
+    "Dec 12": { player: "Joel Embiid", points: 53, year: 2022, team: "76ers", opp: "Hornets", score: "131-113" },
+    "Dec 13": { player: "Wilt Chamberlain", points: 54, year: 1961, team: "Warriors", opp: "Knicks", score: "136-114" },
+    "Dec 14": { player: "Wilt Chamberlain", points: 63, year: 1962, team: "Warriors", opp: "Lakers", score: "118-120" },
+    "Dec 15": { player: "Wilt Chamberlain", points: 50, year: 1961, team: "Warriors", opp: "Hawks", score: "136-127" },
+    "Dec 16": { player: "Wilt Chamberlain", points: 50, year: 1961, team: "Warriors", opp: "Packers", score: "112-110" },
+    "Dec 17": { player: "Gilbert Arenas", points: 60, year: 2006, team: "Wizards", opp: "Lakers", score: "147-141" },
+    "Dec 18": { player: "Wilt Chamberlain", points: 55, year: 1961, team: "Warriors", opp: "Hawks", score: "116-114" },
+    "Dec 19": { player: "Wilt Chamberlain", points: 57, year: 1961, team: "Warriors", opp: "Packers", score: "122-119" },
+    "Dec 20": { player: "Kobe Bryant", points: 62, year: 2005, team: "Lakers", opp: "Mavericks", score: "112-90" },
+    "Dec 21": { player: "James Harden", points: 58, year: 2017, team: "Rockets", opp: "Clippers", score: "118-128" },
+    "Dec 22": { player: "Kobe Bryant", points: 45, year: 2000, team: "Lakers", opp: "Rockets", score: "99-94" },
+    "Dec 23": { player: "Michael Jordan", points: 54, year: 1992, team: "Bulls", opp: "Knicks", score: "107-98" },
+    "Dec 25": { player: "Bernard King", points: 60, year: 1984, team: "Knicks", opp: "Nets", score: "114-120" },
+    "Dec 26": { player: "Wilt Chamberlain", points: 59, year: 1964, team: "Warriors", opp: "Hawks", score: "118-115" },
+    "Dec 27": { player: "Wilt Chamberlain", points: 53, year: 1961, team: "Warriors", opp: "Knicks", score: "119-116" },
+    "Dec 28": { player: "Wilt Chamberlain", points: 52, year: 1962, team: "Warriors", opp: "Lakers", score: "113-111" },
+    "Dec 29": { player: "Kobe Bryant", points: 58, year: 2006, team: "Lakers", opp: "Bobcats", score: "124-133" },
+    "Dec 30": { player: "Wilt Chamberlain", points: 60, year: 1961, team: "Warriors", opp: "Packers", score: "116-111" },
+    "Dec 31": { player: "James Harden", points: 53, year: 2016, team: "Rockets", opp: "Knicks", score: "129-122" }
+};
+
+// ==========================================
+// --- NO NEED TO EDIT ANYTHING BELOW THIS ---
+// ==========================================
+
+const months = [
+    ["January", 31], ["February", 29], ["March", 31], ["April", 30],
+    ["May", 31], ["June", 30], ["July", 31], ["August", 31],
+    ["September", 30], ["October", 31], ["November", 30], ["December", 31]
+];
+
+function build() {
+    let container = document.getElementById("list");
+
+    months.forEach(m => {
+        let monthName = m[0]; let days = m[1];
+        let monthDiv = document.createElement("div");
+        monthDiv.innerHTML = `<div class='month'>${monthName}</div>`;
+        container.appendChild(monthDiv);
+
+        for (let d = 1; d <= days; d++) {
+            let short = monthName.substring(0, 3) + " " + d;
+            let rec = records[short];
+            let card = document.createElement("div");
+            card.className = "card";
+
+            if (rec) {
+                let pClass = rec.points >= 60 ? "has-record high" : "has-record";
+                card.setAttribute("data-search", `${short} ${rec.player} ${rec.points} ${rec.year} ${rec.team} ${rec.opp}`.toLowerCase());
+                card.innerHTML = `
+                    <div class="left-info">
+                        <div class="date">${short}, ${rec.year}</div>
+                        <div class="player">${rec.player}</div>
+                        <div class="game-details">${rec.team} vs. ${rec.opp}</div>
+                    </div>
+                    <div class="points-container">
+                        <div class="points ${pClass}">${rec.points} pts</div>
+                        <div class="score">Final: ${rec.score}</div>
+                    </div>`;
+            } else {
+                card.setAttribute("data-search", `${short} tbd`.toLowerCase());
+                card.innerHTML = `
+                    <div class="left-info">
+                        <div class="date">${short}</div>
+                        <div class="player">TBD</div>
+                    </div>
+                    <div class="points-container"><div class="points">—</div></div>`;
+            }
+            container.appendChild(card);
+        }
+    });
+}
+
+function buildLeaderboard() {
+    const counts = {};
+    
+    // Tally up dates and points for each player
+    for (const [date, data] of Object.entries(records)) {
+        if (!counts[data.player]) {
+            counts[data.player] = 0;
+        }
+        counts[data.player]++;
+    }
+
+    // Sort descending and grab top 10
+    const sortedLeaders = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+    let html = "";
+    sortedLeaders.forEach((leader, index) => {
+        const [player, count] = leader;
+        html += `
+            <div class="leader-item">
+                <div class="leader-top-row">
+                    <div class="leader-name">#${index + 1} ${player}</div>
+                    <div class="leader-actions">
+                        <span class="leader-count">${count} Dates</span>
+                        <button class="show-dates-btn" onclick="filterByPlayer('${player}')">Show Dates</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    document.getElementById("leaderboardList").innerHTML = html;
+}
+
+// Function to filter main list by specific player
+window.filterByPlayer = function(playerName) {
+    // Hide the modal
+    document.getElementById("leaderboardModal").style.display = "none";
+    
+    // Set the search bar text
+    const searchInput = document.getElementById("search");
+    searchInput.value = playerName;
+    
+    // Trigger the search manually
+    searchInput.dispatchEvent(new Event('input'));
+    
+    // Swap buttons in the header
+    document.getElementById("leaderboardBtn").style.display = "none";
+    document.getElementById("clearFilterBtn").style.display = "block";
+};
+
+build();
+
+// Search functionality
+document.getElementById("search").addEventListener("input", e => {
+    let q = e.target.value.toLowerCase().trim();
+    document.querySelectorAll(".card").forEach(card => {
+        card.style.display = card.getAttribute("data-search").includes(q) ? "flex" : "none";
+    });
+    
+    // If the user manually clears the search bar, reset the header buttons
+    if (q === "") {
+        document.getElementById("leaderboardBtn").style.display = "block";
+        document.getElementById("clearFilterBtn").style.display = "none";
+    }
+});
+
+// Clear filter functionality
+document.getElementById("clearFilterBtn").addEventListener("click", () => {
+    const searchInput = document.getElementById("search");
+    searchInput.value = "";
+    searchInput.dispatchEvent(new Event('input')); // This will trigger the input event above
+});
+
+// Modal functionality
+const modal = document.getElementById("leaderboardModal");
+const btn = document.getElementById("leaderboardBtn");
+const closeBtn = document.getElementsByClassName("close")[0];
+
+btn.onclick = function() {
+    buildLeaderboard();
+    modal.style.display = "block";
+}
+closeBtn.onclick = function() {
+    modal.style.display = "none";
+}
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+}
+</script>
+
+</body>
+</html>
