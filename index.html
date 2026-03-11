@@ -4,25 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NBA Points by Calendar Day</title>
-
 <style>
 /* --- CSS STYLES --- */
 body { font-family: system-ui, sans-serif; margin: 0; background: #0f172a; color: white; }
 header { position: sticky; top: 0; background: #020617; padding: 16px; text-align: center; z-index: 10; border-bottom: 1px solid #1e293b; }
-
 .header-content { display: flex; justify-content: space-between; align-items: center; max-width: 650px; margin: 0 auto; flex-wrap: wrap; gap: 10px; }
 h1 { margin: 0; font-size: 20px; text-align: left; }
 .btn-group { display: flex; gap: 10px; }
-
 #leaderboardBtn { background: #facc15; color: #0f172a; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; }
 #leaderboardBtn:hover { background: #eab308; transform: scale(1.05); }
-
 #clearFilterBtn { display: none; background: #fb7185; color: #0f172a; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; transition: 0.2s; }
 #clearFilterBtn:hover { background: #f43f5e; transform: scale(1.05); }
-
 input { margin-top: 15px; padding: 12px; width: 100%; box-sizing: border-box; max-width: 650px; border-radius: 10px; border: none; outline: none; background: #1e293b; color: white; font-size: 15px; }
 input::placeholder { color: #94a3b8; }
-
 .container { padding: 10px; max-width: 650px; margin: 0 auto; }
 .month { margin-top: 24px; font-weight: bold; font-size: 22px; border-bottom: 2px solid #334155; padding-bottom: 5px; }
 .card { background: #1e293b; border-radius: 12px; padding: 16px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; }
@@ -35,8 +29,7 @@ input::placeholder { color: #94a3b8; }
 .score { font-size: 12px; color: #94a3b8; margin-top: 4px; }
 .has-record { color: #facc15; }
 .high { color: #fb7185; }
-
-/* Modal (Leaderboard) Styles */
+/* Modal (Leaderboard + Update) Styles */
 .modal { display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
 .modal-content { background-color: #0f172a; margin: 10% auto; padding: 24px; border: 1px solid #334155; width: 90%; max-width: 550px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e293b; padding-bottom: 12px; margin-bottom: 16px; }
@@ -50,11 +43,15 @@ input::placeholder { color: #94a3b8; }
 .leader-count { background: #334155; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; color: #facc15; }
 .show-dates-btn { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
 .show-dates-btn:hover { background: #2563eb; transform: scale(1.05); }
+/* Update modal button styles */
+#okayBtn, #goToDateBtn { width: 100%; padding: 14px; border-radius: 10px; font-size: 17px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+#okayBtn { background: #facc15; color: #0f172a; border: none; }
+#okayBtn:hover { background: #eab308; transform: scale(1.03); }
+#goToDateBtn { background: #3b82f6; color: white; border: none; }
+#goToDateBtn:hover { background: #2563eb; transform: scale(1.03); }
 </style>
 </head>
-
 <body>
-
 <header>
     <div class="header-content">
         <h1>🏀 NBA Points by Calendar Day By Vewerty Ploik</h1>
@@ -65,9 +62,9 @@ input::placeholder { color: #94a3b8; }
         <input id="search" placeholder="Search player, team, year, or date...">
     </div>
 </header>
-
 <div class="container" id="list"></div>
 
+<!-- Leaderboard Modal -->
 <div id="leaderboardModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -78,11 +75,27 @@ input::placeholder { color: #94a3b8; }
     </div>
 </div>
 
+<!-- NEW UPDATE POPUP MODAL -->
+<div id="updateModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>🚨 Update Alert!</h2>
+            <span class="close" id="updateClose">&times;</span>
+        </div>
+        <div style="text-align: center; padding: 24px 20px; font-size: 19px; line-height: 1.5;">
+            Updated to now include Bam Adebayo’s recent legendary 83 point game!
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px 20px;">
+            <button id="okayBtn">Okay</button>
+            <button id="goToDateBtn">Go To Date</button>
+        </div>
+    </div>
+</div>
+
 <script>
 // ==========================================
 // 🛑 EDIT YOUR RECORDS HERE 🛑
 // ==========================================
-
 const records = {
     // --- JANUARY ---
     "Jan 1": {player: "DeMar DeRozan", points: 52, year: 2018, team: "Raptors", opp: "Bucks", score: "131-127"},
@@ -116,7 +129,6 @@ const records = {
     "Jan 29": {player: "DeMar DeRozan", points: 50, year: 2022, team: "Bulls", opp: "Clippers", score: "135-130"},
     "Jan 30": {player: "James Harden", points: 60, year: 2018, team: "Rockets", opp: "Magic", score: "114-107"},
     "Jan 31": {player: "Jalen Brunson", points: 40, year: 2024, team: "Knicks", opp: "Jazz", score: "118-103"},
-
     // --- FEBRUARY ---
     "Feb 1": { player: "Tyrese Maxey", points: 51, year: 2024, team: "76ers", opp: "Jazz", score: "127-124" },
     "Feb 2": { player: "Kobe Bryant", points: 61, year: 2009, team: "Lakers", opp: "Knicks", score: "126-117" },
@@ -147,7 +159,7 @@ const records = {
     "Feb 27": { player: "Wilt Chamberlain", points: 65, year: 1962, team: "Warriors", opp: "Hawks", score: "147-137" },
     "Feb 28": { player: "Wilt Chamberlain", points: 61, year: 1962, team: "Warriors", opp: "Packers", score: "128-121" },
     "Feb 29": { player: "Jalen Brunson", points: 40, year: 2024, team: "Knicks", opp: "Warriors", score: "99-110" },
-    
+   
     // --- MARCH ---
     "Mar 1": { player: "Stephen Curry", points: 48, year: 2018, team: "Warriors", opp: "Wizards", score: "114-109" },
     "Mar 2": { player: "Wilt Chamberlain", points: 100, year: 1962, team: "Warriors", opp: "Knicks", score: "169-147" },
@@ -158,7 +170,7 @@ const records = {
     "Mar 7": { player: "De'Aaron Fox", points: 44, year: 2022, team: "Kings", opp: "Knicks", score: "115-131" },
     "Mar 8": { player: "Kyrie Irving", points: 50, year: 2022, team: "Nets", opp: "Hornets", score: "132-121" },
     "Mar 9": { player: "Russell Westbrook", points: 58, year: 2017, team: "Thunder", opp: "Trail Blazers", score: "121-126" },
-    "Mar 10": { player: "Bam Adebayo (⭐️NEW⭐️)", points: 83, year: 2026, team: "Heat", opp: "Wizards", score: "150-129" },
+    "Mar 10": { player: "Bam Adebayo ⭐️", points: 83, year: 2026, team: "Heat", opp: "Wizards", score: "150-129" },
     "Mar 11": { player: "Damian Lillard", points: 50, year: 2021, team: "Trail Blazers", opp: "Pelicans", score: "125-124" },
     "Mar 12": { player: "Larry Bird", points: 60, year: 1985, team: "Celtics", opp: "Hawks", score: "126-115" },
     "Mar 13": { player: "James Harden", points: 44, year: 2021, team: "Nets", opp: "Pistons", score: "100-95" },
@@ -180,7 +192,7 @@ const records = {
     "Mar 29": { player: "Russell Westbrook", points: 57, year: 2017, team: "Thunder", opp: "Magic", score: "114-106" },
     "Mar 30": { player: "Kevin Durant", points: 41, year: 2022, team: "Nets", opp: "Pistons", score: "130-123" },
     "Mar 31": { player: "Kevin Durant", points: 55, year: 2022, team: "Nets", opp: "Hawks", score: "115-122"},
-    
+   
     // --- APRIL ---
     "Apr 1": { player: "Devin Booker", points: 52, year: 2024, team: "Suns", opp: "Pelicans", score: "124-111" },
     "Apr 2": { player: "Kevin Durant", points: 55, year: 2022, team: "Nets", opp: "Hawks", score: "115-122" },
@@ -212,7 +224,6 @@ const records = {
     "Apr 28": { player: "John Havlicek", points: 54, year: 1973, team: "Celtics", opp: "Hawks", score: "134-109" },
     "Apr 29": { player: "Michael Jordan", points: 54, year: 1998, team: "Bulls", opp: "Nets", score: "116-101" },
     "Apr 30": { player: "Stephen Curry", points: 50, year: 2023, team: "Warriors", opp: "Kings", score: "120-100" },
-
     // --- MAY (Playoffs) ---
     "May 1": { player: "Michael Jordan", points: 50, year: 1988, team: "Bulls", opp: "Cavaliers", score: "104-93" },
     "May 2": { player: "Damian Lillard", points: 34, year: 2021, team: "Blazers", opp: "Celtics", score: "129-119" },
@@ -245,7 +256,6 @@ const records = {
     "May 29": { player: "Jimmy Butler", points: 28, year: 2023, team: "Heat", opp: "Celtics", score: "103-84" },
     "May 30": { player: "Kobe Bryant", points: 39, year: 2008, team: "Lakers", opp: "Spurs", score: "100-92" },
     "May 31": { player: "LeBron James", points: 51, year: 2018, team: "Cavaliers", opp: "Warriors", score: "114-124" },
-
     // --- JUNE (Finals & Late Playoffs) ---
     "Jun 1": { player: "Damian Lillard", points: 55, year: 2021, team: "Blazers", opp: "Nuggets", score: "140-147" },
     "Jun 2": { player: "Stephen Curry", points: 33, year: 2018, team: "Warriors", opp: "Cavaliers", score: "122-103" },
@@ -277,10 +287,8 @@ const records = {
     "Jun 28": { player: "Paul George", points: 41, year: 2021, team: "Clippers", opp: "Suns", score: "116-102" },
     "Jun 29": { player: "Lou Williams", points: 21, year: 2021, team: "Hawks", opp: "Bucks", score: "110-88" },
     "Jun 30": { player: "Chris Paul", points: 41, year: 2021, team: "Suns", opp: "Clippers", score: "130-103" },
-
     // --- JULY (Bubble & Late Playoffs) ---
     "Jul 31": { player: "James Harden", points: 49, year: 2020, team: "Rockets", opp: "Mavericks", score: "153-149" },
-
     // --- AUGUST (The 2020 Bubble) ---
     "Aug 1": { player: "T.J. Warren", points: 53, year: 2020, team: "Pacers", opp: "76ers", score: "127-121" },
     "Aug 9": { player: "Damian Lillard", points: 51, year: 2020, team: "Blazers", opp: "76ers", score: "124-121" },
@@ -289,12 +297,10 @@ const records = {
     "Aug 17": { player: "Donovan Mitchell", points: 57, year: 2020, team: "Jazz", opp: "Nuggets", score: "125-135" },
     "Aug 23": { player: "Jamal Murray", points: 50, year: 2020, team: "Nuggets", opp: "Jazz", score: "127-129" },
     "Aug 30": { player: "Jamal Murray", points: 50, year: 2020, team: "Nuggets", opp: "Jazz", score: "119-107" },
-
     // --- SEPTEMBER (Bubble Playoffs) ---
     "Sep 1": { player: "Donovan Mitchell", points: 22, year: 2020, team: "Jazz", opp: "Nuggets", score: "78-80" },
     "Sep 15": { player: "Jamal Murray", points: 40, year: 2020, team: "Nuggets", opp: "Clippers", score: "104-89" },
     "Sep 20": { player: "Anthony Davis", points: 31, year: 2020, team: "Lakers", opp: "Nuggets", score: "105-103" },
-
     // --- OCTOBER ---
     "Oct 18": { player: "Jaylen Brown", points: 35, year: 2022, team: "Celtics", opp: "76ers", score: "126-117" },
     "Oct 19": { player: "Stephen Curry", points: 45, year: 2021, team: "Warriors", opp: "Clippers", score: "115-113" },
@@ -310,7 +316,6 @@ const records = {
     "Oct 29": { player: "Klay Thompson", points: 52, year: 2018, team: "Warriors", opp: "Bulls", score: "149-124" },
     "Oct 30": { player: "Stephen Curry", points: 53, year: 2015, team: "Warriors", opp: "Pelicans", score: "134-120" },
     "Oct 31": { player: "Kevin Durant", points: 51, year: 2018, team: "Warriors", opp: "Raptors", score: "128-131" },
-
     // --- NOVEMBER ---
     "Nov 1": { player: "Michael Jordan", points: 50, year: 1986, team: "Bulls", opp: "Knicks", score: "112-108" },
     "Nov 2": { player: "Wilt Chamberlain", points: 72, year: 1962, team: "Warriors", opp: "Lakers", score: "115-127" },
@@ -342,7 +347,6 @@ const records = {
     "Nov 28": { player: "Wilt Chamberlain", points: 51, year: 1962, team: "Warriors", opp: "Lakers", score: "125-115" },
     "Nov 29": { player: "Wilt Chamberlain", points: 53, year: 1962, team: "Warriors", opp: "Hawks", score: "119-122" },
     "Nov 30": { player: "Devin Booker", points: 51, year: 2022, team: "Suns", opp: "Bulls", score: "132-113" },
-
     // --- DECEMBER ---
     "Dec 1": { player: "Stephen Curry", points: 40, year: 2017, team: "Warriors", opp: "Magic", score: "133-112" },
     "Dec 2": { player: "Stephen Curry", points: 51, year: 2015, team: "Warriors", opp: "Hornets", score: "116-99" },
@@ -375,11 +379,9 @@ const records = {
     "Dec 30": { player: "Wilt Chamberlain", points: 60, year: 1961, team: "Warriors", opp: "Packers", score: "116-111" },
     "Dec 31": { player: "James Harden", points: 53, year: 2016, team: "Rockets", opp: "Knicks", score: "129-122" }
 };
-
 // ==========================================
 // --- NO NEED TO EDIT ANYTHING BELOW THIS ---
 // ==========================================
-
 const months = [
     ["January", 31], ["February", 29], ["March", 31], ["April", 30],
     ["May", 31], ["June", 30], ["July", 31], ["August", 31],
@@ -388,20 +390,20 @@ const months = [
 
 function build() {
     let container = document.getElementById("list");
-
     months.forEach(m => {
         let monthName = m[0]; let days = m[1];
         let monthDiv = document.createElement("div");
         monthDiv.innerHTML = `<div class='month'>${monthName}</div>`;
         container.appendChild(monthDiv);
-
         for (let d = 1; d <= days; d++) {
             let short = monthName.substring(0, 3) + " " + d;
             let rec = records[short];
             let card = document.createElement("div");
             card.className = "card";
-
             if (rec) {
+                // ADD ID FOR MARCH 10 SO WE CAN SCROLL TO IT
+                if (short === "Mar 10") card.id = "mar10";
+                
                 let pClass = rec.points >= 60 ? "has-record high" : "has-record";
                 card.setAttribute("data-search", `${short} ${rec.player} ${rec.points} ${rec.year} ${rec.team} ${rec.opp}`.toLowerCase());
                 card.innerHTML = `
@@ -430,20 +432,13 @@ function build() {
 
 function buildLeaderboard() {
     const counts = {};
-    
-    // Tally up dates and points for each player
     for (const [date, data] of Object.entries(records)) {
-        if (!counts[data.player]) {
-            counts[data.player] = 0;
-        }
+        if (!counts[data.player]) counts[data.player] = 0;
         counts[data.player]++;
     }
-
-    // Sort descending and grab top 10
     const sortedLeaders = Object.entries(counts)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10);
-
     let html = "";
     sortedLeaders.forEach((leader, index) => {
         const [player, count] = leader;
@@ -459,23 +454,14 @@ function buildLeaderboard() {
             </div>
         `;
     });
-    
     document.getElementById("leaderboardList").innerHTML = html;
 }
 
-// Function to filter main list by specific player
 window.filterByPlayer = function(playerName) {
-    // Hide the modal
     document.getElementById("leaderboardModal").style.display = "none";
-    
-    // Set the search bar text
     const searchInput = document.getElementById("search");
     searchInput.value = playerName;
-    
-    // Trigger the search manually
     searchInput.dispatchEvent(new Event('input'));
-    
-    // Swap buttons in the header
     document.getElementById("leaderboardBtn").style.display = "none";
     document.getElementById("clearFilterBtn").style.display = "block";
 };
@@ -488,8 +474,6 @@ document.getElementById("search").addEventListener("input", e => {
     document.querySelectorAll(".card").forEach(card => {
         card.style.display = card.getAttribute("data-search").includes(q) ? "flex" : "none";
     });
-    
-    // If the user manually clears the search bar, reset the header buttons
     if (q === "") {
         document.getElementById("leaderboardBtn").style.display = "block";
         document.getElementById("clearFilterBtn").style.display = "none";
@@ -500,14 +484,13 @@ document.getElementById("search").addEventListener("input", e => {
 document.getElementById("clearFilterBtn").addEventListener("click", () => {
     const searchInput = document.getElementById("search");
     searchInput.value = "";
-    searchInput.dispatchEvent(new Event('input')); // This will trigger the input event above
+    searchInput.dispatchEvent(new Event('input'));
 });
 
-// Modal functionality
+// Leaderboard Modal functionality
 const modal = document.getElementById("leaderboardModal");
 const btn = document.getElementById("leaderboardBtn");
 const closeBtn = document.getElementsByClassName("close")[0];
-
 btn.onclick = function() {
     buildLeaderboard();
     modal.style.display = "block";
@@ -515,12 +498,49 @@ btn.onclick = function() {
 closeBtn.onclick = function() {
     modal.style.display = "none";
 }
+
+// ==================== NEW UPDATE POPUP LOGIC ====================
+const updateModal = document.getElementById("updateModal");
+const updateClose = document.getElementById("updateClose");
+const okayBtn = document.getElementById("okayBtn");
+const goToDateBtn = document.getElementById("goToDateBtn");
+
+function closeUpdateModal() {
+    updateModal.style.display = "none";
+}
+
+updateClose.onclick = closeUpdateModal;
+okayBtn.onclick = closeUpdateModal;
+
+goToDateBtn.onclick = function() {
+    closeUpdateModal();
+    const targetCard = document.getElementById("mar10");
+    if (targetCard) {
+        targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+};
+
+// Close update modal when clicking outside it
+updateModal.addEventListener("click", function(event) {
+    if (event.target === updateModal) {
+        closeUpdateModal();
+    }
+});
+
+// Show the popup automatically when the page opens
+updateModal.style.display = "block";
+
+// Extend the global window click handler to also close the update modal if needed
+const oldWindowClick = window.onclick;
 window.onclick = function(event) {
-    if (event.target == modal) {
+    if (oldWindowClick) oldWindowClick(event);
+    if (event.target === updateModal) {
+        closeUpdateModal();
+    }
+    if (event.target === modal) {
         modal.style.display = "none";
     }
 }
 </script>
-
 </body>
 </html>
