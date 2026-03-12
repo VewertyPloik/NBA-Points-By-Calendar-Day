@@ -26,9 +26,17 @@ input::placeholder { color: #94a3b8; }
 .game-details { font-size: 13px; color: #cbd5e1; }
 .points-container { text-align: right; }
 .points { font-size: 26px; font-weight: 800; color: #475569; }
+
+/* NEW COLOR GRADING FOR POINTS */
+.points.white   { color: #ffffff; }
+.points.blue    { color: #60a5fa; }
+.points.green   { color: #4ade80; }
+.points.yellow  { color: #facc15; }
+.points.orange  { color: #fb923c; }
+.points.red     { color: #f43f5e; }
+
 .score { font-size: 12px; color: #94a3b8; margin-top: 4px; }
-.has-record { color: #facc15; }
-.high { color: #fb7185; }
+
 /* Modal (Leaderboard + Update) Styles */
 .modal { display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
 .modal-content { background-color: #0f172a; margin: 10% auto; padding: 24px; border: 1px solid #334155; width: 90%; max-width: 550px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
@@ -67,7 +75,7 @@ input::placeholder { color: #94a3b8; }
 <div id="leaderboardModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Top 10 Record Holders</h2>
+            <h2>Top 25 Record Holders</h2>
             <span class="close">&times;</span>
         </div>
         <div id="leaderboardList"></div>
@@ -77,11 +85,11 @@ input::placeholder { color: #94a3b8; }
 <div id="updateModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>🚨 Update Alert! v1.5</h2>
+            <h2>🚨 Update Alert! v1.6</h2>
             <span class="close" id="updateClose">&times;</span>
         </div>
         <div style="text-align: center; padding: 24px 20px; font-size: 19px; line-height: 1.5;">
-            Updated to now include July and August (More Dates)
+           Now has leaderboard top 25 instead of 10 and ui updates
         </div>
         <div style="display: flex; flex-direction: column; gap: 12px; padding: 0 20px 20px;">
             <button id="okayBtn">Okay</button>
@@ -156,7 +164,7 @@ const records = {
     "Feb 27": { player: "Wilt Chamberlain", points: 65, year: 1962, team: "Warriors", opp: "Hawks", score: "147-137" },
     "Feb 28": { player: "Wilt Chamberlain", points: 61, year: 1962, team: "Warriors", opp: "Packers", score: "128-121" },
     "Feb 29": { player: "Jalen Brunson", points: 40, year: 2024, team: "Knicks", opp: "Warriors", score: "99-110" },
-  
+ 
     // --- MARCH ---
     "Mar 1": { player: "Stephen Curry", points: 48, year: 2018, team: "Warriors", opp: "Wizards", score: "114-109" },
     "Mar 2": { player: "Wilt Chamberlain", points: 100, year: 1962, team: "Warriors", opp: "Knicks", score: "169-147" },
@@ -189,7 +197,7 @@ const records = {
     "Mar 29": { player: "Russell Westbrook", points: 57, year: 2017, team: "Thunder", opp: "Magic", score: "114-106" },
     "Mar 30": { player: "Kevin Durant", points: 41, year: 2022, team: "Nets", opp: "Pistons", score: "130-123" },
     "Mar 31": { player: "Kevin Durant", points: 55, year: 2022, team: "Nets", opp: "Hawks", score: "115-122"},
-  
+ 
     // --- APRIL ---
     "Apr 1": { player: "Devin Booker", points: 52, year: 2024, team: "Suns", opp: "Pelicans", score: "124-111" },
     "Apr 2": { player: "Kevin Durant", points: 55, year: 2022, team: "Nets", opp: "Hawks", score: "115-122" },
@@ -321,7 +329,7 @@ const records = {
     "Aug 30": { player: "Jamal Murray", points: 50, year: 2020, team: "Nuggets", opp: "Jazz", score: "119-107" },
     "Aug 31": { player: "Jimmy Butler", points: 41, year: 2020, team: "Heat", opp: "Bucks", score: "115-104" },
     // (Dates with no official NBA game in 2020 bubble — e.g. Aug 16, 26, 27, 28 — stay TBD automatically)
-  
+ 
     // --- SEPTEMBER (Bubble Playoffs) ---
     "Sep 1": { player: "Donovan Mitchell", points: 22, year: 2020, team: "Jazz", opp: "Nuggets", score: "78-80" },
     "Sep 15": { player: "Jamal Murray", points: 40, year: 2020, team: "Nuggets", opp: "Clippers", score: "104-89" },
@@ -428,8 +436,17 @@ function build() {
             if (rec) {
                 // ADD ID FOR MARCH 10 SO WE CAN SCROLL TO IT
                 if (short === "Mar 10") card.id = "mar10";
-              
-                let pClass = rec.points >= 60 ? "has-record high" : "has-record";
+             
+                // NEW COLOR GRADING LOGIC
+                let colorClass = "";
+                const pts = rec.points;
+                if (pts >= 70) colorClass = "red";
+                else if (pts >= 60) colorClass = "orange";
+                else if (pts >= 50) colorClass = "yellow";
+                else if (pts >= 40) colorClass = "green";
+                else if (pts >= 30) colorClass = "blue";
+                else colorClass = "white";
+
                 card.setAttribute("data-search", `${short} ${rec.player} ${rec.points} ${rec.year} ${rec.team} ${rec.opp}`.toLowerCase());
                 card.innerHTML = `
                     <div class="left-info">
@@ -438,7 +455,7 @@ function build() {
                         <div class="game-details">${rec.team} vs. ${rec.opp}</div>
                     </div>
                     <div class="points-container">
-                        <div class="points ${pClass}">${rec.points} pts</div>
+                        <div class="points ${colorClass}">${rec.points} pts</div>
                         <div class="score">Final: ${rec.score}</div>
                     </div>`;
             } else {
@@ -462,7 +479,8 @@ function buildLeaderboard() {
     }
     const sortedLeaders = Object.entries(counts)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
+        .slice(0, 25);   // ← CHANGED TO TOP 25
+
     let html = "";
     sortedLeaders.forEach((leader, index) => {
         const [player, count] = leader;
